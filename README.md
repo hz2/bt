@@ -1,5 +1,7 @@
 # BitTorrent Client
 
+[![Build Status](https://github.com/hz2/bt/actions/workflows/ci.yml/badge.svg)](https://github.com/h2z/bt/actions/workflows/ci.yml)
+
 ## Design
 
 - design of this client is based on the [BitTorrent v1.0 protocol](https://wiki.theory.org/BitTorrentSpecification).
