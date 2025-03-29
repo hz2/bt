@@ -308,174 +308,6 @@ impl Peer {
         }
     }
 
-    // pub fn exchange(
-    //     &mut self,
-    //     piece_length: u32,
-    //     total_length: u64,
-    //     piece_hash_fn: &dyn Fn(u32) -> [u8; 20],
-    //     output_path: PathBuf,
-    // ) -> anyhow::Result<()> {
-    //     self.send_message(&PeerMessage::Interested)?;
-    //     self.interested = true;
-
-    //     let mut writer = PieceWriter::new(output_path, piece_length, total_length)?;
-    //     let mut pieces: HashMap<u32, Piece> = HashMap::new();
-
-    //     let total_pieces = ((total_length + piece_length as u64 - 1) / piece_length as u64) as u32;
-    //     let mut current_piece = 0;
-    //     let mut requested = false;
-    //     log::debug!("total pieces: {}", total_pieces);
-    //     loop {
-    //         let msg = match self.read_message() {
-    //             Ok(msg) => msg,
-    //             Err(e) => {
-    //                 log::error!("Failed to read message from peer {}: {}", self.addr, e);
-    //                 return Err(e.into());
-    //             }
-    //         };
-
-    //         log::debug!("Received message from {}: {:?}", self.addr, msg);
-
-    //         match msg {
-    //             PeerMessage::Unchoke => {
-    //                 self.choked = false;
-    //                 log::info!("Peer {} unchoked us", self.addr);
-    //             }
-
-    //             PeerMessage::Piece {
-    //                 index,
-    //                 begin,
-    //                 block,
-    //             } => {
-    //                 log::info!(
-    //                     "Received block: piece={}, offset={}, len={}, from={}",
-    //                     index,
-    //                     begin,
-    //                     block.len(),
-    //                     self.addr
-    //                 );
-
-    //                 let piece_len = if (index + 1) as u64 * piece_length as u64 > total_length {
-    //                     (total_length - index as u64 * piece_length as u64) as u32
-    //                 } else {
-    //                     piece_length
-    //                 };
-
-    //                 let entry = pieces
-    //                     .entry(index)
-    //                     .or_insert_with(|| Piece::new(index, piece_len, BLOCK_SIZE));
-
-    //                 entry.add_block(begin, block);
-
-    //                 if entry.is_complete() {
-    //                     log::debug!("assembling and verifying piece {}", index);
-    //                     if let Some(data) = entry.assemble() {
-    //                         let expected = piece_hash_fn(index);
-    //                         let actual = Sha1::digest(&data);
-
-    //                         if actual[..] == expected[..] {
-    //                             log::info!("piece {} verified successfully", index);
-    //                             writer.write_piece(index, &data)?;
-    //                             pieces.remove(&index);
-    //                             requested = false;
-    //                             current_piece += 1;
-    //                             if current_piece >= total_pieces {
-    //                                 log::info!("all pieces downloaded from {}", self.addr);
-    //                                 break;
-    //                             }
-    //                         } else {
-    //                             log::warn!(
-    //                                 "hash mismatch on piece {} (expected: {:02x?}, actual: {:02x?})",
-    //                                 index,
-    //                                 expected,
-    //                                 actual
-    //                             );
-    //                             pieces.remove(&index);
-    //                             requested = false;
-    //                         }
-    //                     }
-    //                 }
-    //             }
-
-    //             PeerMessage::Have(index) => {
-    //                 log::debug!("peer {} has piece {}", self.addr, index);
-    //                 if let Some(bf) = &mut self.bitfield {
-    //                     bf.set(index as usize);
-    //                 }
-    //             }
-
-    //             PeerMessage::Bitfield(payload) => {
-    //                 let bf = BitField::new(payload);
-    //                 log::debug!("received bitfield from {}: {:?}", self.addr, bf.pieces());
-    //                 self.bitfield = Some(bf);
-    //             }
-
-    //             PeerMessage::Choke => {
-    //                 self.choked = true;
-    //                 log::info!("peer {} choked us", self.addr);
-    //             }
-
-    //             PeerMessage::KeepAlive => {
-    //                 log::debug!("received keep-alive from {}", self.addr);
-    //             }
-
-    //             other => {
-    //                 log::debug!("received other message from {}: {:?}", self.addr, other);
-    //             }
-    //         }
-
-    //         if !self.choked && !requested {
-    //             if let Some(bitfield) = &self.bitfield {
-    //                 if current_piece >= total_pieces {
-    //                     continue;
-    //                 }
-
-    //                 if !bitfield.has_piece(current_piece as usize) {
-    //                     log::debug!(
-    //                         "skipping piece {}: peer {} does not have it",
-    //                         current_piece,
-    //                         self.addr
-    //                     );
-    //                     current_piece += 1;
-    //                     continue;
-    //                 }
-
-    //                 log::info!(
-    //                     "requesting piece {} from {} (length: {})",
-    //                     current_piece,
-    //                     self.addr,
-    //                     piece_length
-    //                 );
-
-    //                 let last_piece_len =
-    //                     if (current_piece + 1) as u64 * piece_length as u64 > total_length {
-    //                         (total_length - (current_piece as u64 * piece_length as u64)) as u32
-    //                     } else {
-    //                         piece_length
-    //                     };
-
-    //                 let mut offset = 0;
-    //                 while offset < last_piece_len {
-    //                     let block_size = BLOCK_SIZE.min(last_piece_len - offset);
-    //                     log::debug!(
-    //                         "requesting block: piece={}, offset={}, size={} from {}",
-    //                         current_piece,
-    //                         offset,
-    //                         block_size,
-    //                         self.addr
-    //                     );
-    //                     self.request_piece(current_piece, offset, block_size)?;
-    //                     offset += block_size;
-    //                 }
-
-    //                 requested = true;
-    //             }
-    //         }
-    //     }
-
-    //     Ok(())
-    // }
-
     fn read_bitfield(stream: &mut TcpStream) -> anyhow::Result<BitField> {
         let mut len_buf = [0u8; 4];
         stream.read_exact(&mut len_buf)?;
@@ -614,13 +446,13 @@ mod tests {
     use crate::util::init_logging;
     use crate::SAMPLE_PATH;
     use sha1::Digest;
-    use std::fs;
-    // use std::io::Read;
-    // use std::path::PathBuf;
+    use std::collections::VecDeque;
+    use std::sync::{mpsc, Arc, Mutex};
+    use std::thread;
     use std::time::Duration;
 
     #[test]
-    fn test_peer_handshake() {
+    fn test_real_peer_handshake() {
         let _ = init_logging();
 
         let bytes = std::fs::read(SAMPLE_PATH).expect("failed to read .torrent");
@@ -659,68 +491,8 @@ mod tests {
         }
     }
 
-    // #[test]
-    // fn test_peer_download() {
-    //     let _ = init_logging();
-
-    //     let sample_path = SAMPLE_PATH;
-    //     let bytes = fs::read(sample_path).expect("failed to read .torrent file");
-    //     let torrent: Torrent = serde_bencode::from_bytes(&bytes).expect("invalid torrent file");
-
-    //     let req = TrackerRequest {
-    //         info_hash: torrent.info_hash(),
-    //         peer_id: *b"-RU0001-123456789012",
-    //         port: 6881,
-    //         uploaded: 0,
-    //         downloaded: 0,
-    //         left: torrent.total_length(),
-    //         compact: 1,
-    //     };
-
-    //     let resp = TrackerRequest::announce(&req, &torrent).expect("announce failed");
-
-    //     let peer_addr = resp
-    //         .peers
-    //         .iter()
-    //         .filter_map(|p| match p {
-    //             SocketType::IPv4(addr) => Some(addr),
-    //             _ => None,
-    //         })
-    //         .next()
-    //         .expect("no peers found");
-
-    //     let mut peer = Peer::new(
-    //         std::net::SocketAddr::V4(*peer_addr),
-    //         &req.info_hash,
-    //         &req.peer_id,
-    //     )
-    //     .expect("failed to create peer");
-
-    //     let piece_hash_fn = |i| torrent.piece_hash(i);
-    //     let output_path = PathBuf::from(TARGET_PATH);
-
-    //     // remove any existing file
-    //     let _ = fs::remove_file(&output_path);
-
-    //     peer.exchange(
-    //         torrent.piece_length() as u32,
-    //         torrent.total_length() as u64,
-    //         &piece_hash_fn,
-    //         output_path.clone(),
-    //     )
-    //     .expect("exchange failed");
-
-    //     let mut file = fs::File::open(output_path).expect("failed to open output");
-    //     let mut buf = vec![0u8; torrent.piece_length() as usize];
-    //     file.read_exact(&mut buf).expect("failed to read piece");
-
-    //     let actual_hash = sha1::Sha1::digest(&buf);
-    //     let expected_hash = piece_hash_fn(0);
-    //     assert_eq!(actual_hash[..], expected_hash[..], "piece hash mismatch");
-    // }
-
     #[test]
-    fn test_peer_run_download() {
+    fn test_real_peer_run_download() {
         use std::collections::VecDeque;
         use std::sync::{mpsc, Arc, Mutex};
         use std::thread;
@@ -769,7 +541,6 @@ mod tests {
             }
         };
 
-        // Shared state
         let mut queue = VecDeque::new();
         queue.push_back(0); // try downloading piece 0
         let piece_queue = Arc::new(Mutex::new(queue));
@@ -807,12 +578,8 @@ mod tests {
     }
 
     #[test]
-    fn test_peer_run_skips_missing_piece() {
-        use std::collections::VecDeque;
-        use std::sync::{mpsc, Arc, Mutex};
-        use std::thread;
-
-        let _ = init_logging();
+    fn test_real_peer_run_skips_missing_piece() {
+        init_logging();
 
         let bytes = std::fs::read(SAMPLE_PATH).expect("failed to read .torrent file");
         let torrent: Torrent = serde_bencode::from_bytes(&bytes).expect("invalid torrent");
@@ -855,7 +622,6 @@ mod tests {
             }
         };
 
-        // Overwrite the peer's bitfield with one that doesn't have piece 0
         if let Some(ref mut bf) = peer.bitfield {
             bf.unset(0);
         }
@@ -882,14 +648,12 @@ mod tests {
             }
         });
 
-        // Should timeout because the peer can't help
         let result = rx.recv_timeout(Duration::from_secs(5));
         assert!(
             result.is_err(),
             "peer should not have been able to send piece"
         );
 
-        // The queue should still contain the piece
         let q = piece_queue.lock().unwrap();
         assert!(
             q.contains(&0),

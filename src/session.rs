@@ -127,7 +127,7 @@ mod tests {
     use std::net::SocketAddr;
 
     #[test]
-    fn test_session_full_download() {
+    fn test_real_session_full_download() {
         let _ = init_logging();
 
         let bytes = fs::read(SAMPLE_PATH).expect("failed to read .torrent file");
@@ -178,7 +178,7 @@ mod tests {
     }
 
     #[test]
-    fn test_session_download_with_stats() {
+    fn test_real_session_download_with_stats() {
         let _ = init_logging();
 
         let bytes = fs::read(SAMPLE_PATH).expect("failed to read .torrent file");
@@ -211,7 +211,6 @@ mod tests {
             return;
         }
 
-        // Clean up previous test output
         let output_path = PathBuf::from(TARGET_PATH);
         let _ = fs::remove_file(&output_path);
 
@@ -227,7 +226,6 @@ mod tests {
             "no successful peers participated"
         );
 
-        // Verify all piece hashes match
         let mut file = fs::File::open(&output_path).expect("could not open output file");
         for i in 0..stats.total_pieces {
             let piece_len = if (i + 1) as u64 * torrent.piece_length() as u64
