@@ -14,4 +14,5 @@ RUN cargo fetch
 
 RUN cargo build --release
 
-CMD ["sh", "-c", "cargo fmt -- --check && cargo clippy --all -- -D warnings && cargo test -- --nocapture"]
+CMD ["sh", "-c", "cargo fmt -- --check && cargo clippy --all -- -D warnings && cargo test ci -- --nocapture"]
+

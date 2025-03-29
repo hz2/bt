@@ -128,7 +128,7 @@ mod tests {
 
     #[test]
     fn test_real_session_full_download() {
-        let _ = init_logging();
+        init_logging();
 
         let bytes = fs::read(SAMPLE_PATH).expect("failed to read .torrent file");
         let torrent: Torrent = serde_bencode::from_bytes(&bytes).expect("invalid torrent");
@@ -179,7 +179,7 @@ mod tests {
 
     #[test]
     fn test_real_session_download_with_stats() {
-        let _ = init_logging();
+        init_logging();
 
         let bytes = fs::read(SAMPLE_PATH).expect("failed to read .torrent file");
         let torrent: Torrent = serde_bencode::from_bytes(&bytes).expect("invalid torrent");

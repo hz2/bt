@@ -118,14 +118,14 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_bitfield_new() {
+    fn test_ci_bitfield_new() {
         let bitfield = BitField::new(vec![0b00000001, 0b00000000]);
         assert_eq!(bitfield.len, 2);
         assert_eq!(bitfield.payload, vec![0b00000001, 0b00000000]);
     }
 
     #[test]
-    fn bitfield_has() {
+    fn test_ci_bitfield_from_bytes() {
         let bf = BitField {
             payload: vec![0b10101010, 0b01010101],
             len: 16,

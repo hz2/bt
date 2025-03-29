@@ -208,7 +208,7 @@ mod tests {
     use std::net::{Ipv4Addr, Ipv6Addr, SocketAddrV4, SocketAddrV6};
 
     #[test]
-    fn test_peers_deserialize() {
+    fn test_ci_peers_deserialize() {
         let mut raw = Vec::new();
         let segments = Ipv6Addr::new(0, 0, 0, 0, 0, 0, 0, 1).segments();
         for segment in &segments {
@@ -228,7 +228,7 @@ mod tests {
     }
 
     #[test]
-    fn test_peers_serialize() {
+    fn test_ci_peers_serialize() {
         let peers = Peers(vec![
             peers::SocketType::IPv6(SocketAddrV6::new(Ipv6Addr::LOCALHOST, 6881, 0, 0)),
             peers::SocketType::IPv4(SocketAddrV4::new(Ipv4Addr::new(127, 0, 0, 1), 6881)),
@@ -239,7 +239,7 @@ mod tests {
     }
 
     #[test]
-    fn test_parse_torrent_file() {
+    fn test_ci_parse_torrent_file() {
         let bytes = std::fs::read(SAMPLE_PATH).expect("failed to read .torrent file");
         let _: Torrent = serde_bencode::from_bytes(&bytes).expect("failed to parse");
     }
