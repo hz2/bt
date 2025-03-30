@@ -14,6 +14,7 @@ const BT_PROTOCOL_LEN: u8 = 19;
 const HANDSHAKE_LEN: usize = 68;
 const RESERVED_LEN: usize = 8;
 const BLOCK_SIZE: u32 = 16 * 1024;
+const TIMEOUT: Duration = Duration::from_secs(3);
 
 #[derive(Debug)]
 pub struct Peer {
@@ -28,9 +29,9 @@ impl Peer {
     pub fn new(addr: SocketAddr, info_hash: &[u8; 20], peer_id: &[u8; 20]) -> anyhow::Result<Self> {
         log::debug!("connecting to peer: {:?}", addr);
 
-        let mut stream = TcpStream::connect_timeout(&addr, Duration::from_secs(5))?;
-        stream.set_read_timeout(Some(Duration::from_secs(5)))?;
-        stream.set_write_timeout(Some(Duration::from_secs(5)))?;
+        let mut stream = TcpStream::connect_timeout(&addr, TIMEOUT)?;
+        stream.set_read_timeout(Some(TIMEOUT))?;
+        stream.set_write_timeout(Some(TIMEOUT))?;
 
         let mut handshake = Vec::with_capacity(68);
         handshake.push(BT_PROTOCOL_LEN);
@@ -210,7 +211,7 @@ impl Peer {
                 }
             }
 
-            // Get the next piece to download
+            // get the next piece to download
             let maybe_index = {
                 let mut queue = pending_pieces.lock().unwrap();
                 queue.pop_front()
@@ -218,7 +219,7 @@ impl Peer {
 
             let index = match maybe_index {
                 Some(i) => i,
-                None => break, // No more work
+                None => break, // no more pieces to download
             };
 
             log::info!("Requesting piece {} from {}", index, self.addr);
@@ -251,7 +252,7 @@ impl Peer {
                         index
                     );
                     rejected.insert(index);
-                    std::thread::sleep(Duration::from_millis(100)); // sleep briefly to avoid busy wait
+                    std::thread::sleep(Duration::from_millis(100)); // backoff
                     let mut queue = pending_pieces.lock().unwrap();
                     queue.push_back(index);
                     continue;
@@ -452,8 +453,8 @@ mod tests {
     use std::time::Duration;
 
     #[test]
-    fn test_real_peer_handshake() {
-        let _ = init_logging();
+    fn test_real_peer_ipv4_handshake() {
+        init_logging();
 
         let bytes = std::fs::read(SAMPLE_PATH).expect("failed to read .torrent");
         let torrent: Torrent = serde_bencode::from_bytes(&bytes).expect("invalid .torrent");
@@ -470,39 +471,32 @@ mod tests {
 
         let resp = TrackerRequest::announce(&req, &torrent).expect("announce failed");
 
-        let addr = match resp.peers.iter().find_map(|p| match p {
-            SocketType::IPv4(addr) => Some(*addr),
-            _ => None,
-        }) {
-            Some(ipv4) => ipv4,
+        match resp
+            .peers
+            .iter()
+            .filter_map(|p| match p {
+                SocketType::IPv4(addr) => Some(*addr),
+                _ => None,
+            })
+            .find_map(|addr| {
+                Peer::new(std::net::SocketAddr::V4(addr), &req.info_hash, &req.peer_id).ok()
+            }) {
+            Some(peer) => {
+                log::info!("handshake successful with peer {}", peer.addr);
+            }
             None => {
-                eprintln!("no usable IPv4 peer found");
-                return;
-            }
-        };
-
-        match Peer::new(std::net::SocketAddr::V4(addr), &req.info_hash, &req.peer_id) {
-            Ok(_) => {
-                println!("handshake successful with peer {}", addr);
-            }
-            Err(e) => {
-                eprintln!("skipping test: failed to connect to peer {}: {}", addr, e);
+                log::error!("no usable IPv4 peer could be connected to");
             }
         }
+        log::error!("no usable peer found");
     }
 
     #[test]
-    fn test_real_peer_run_download() {
-        use std::collections::VecDeque;
-        use std::sync::{mpsc, Arc, Mutex};
-        use std::thread;
+    fn test_real_peer_ipv6_handshake() {
+        init_logging();
 
-        let _ = init_logging();
-
-        let bytes = std::fs::read(SAMPLE_PATH).expect("failed to read .torrent file");
-        let torrent: Torrent = serde_bencode::from_bytes(&bytes).expect("invalid torrent");
-
-        let torrent = Arc::new(torrent); // wrap in Arc
+        let bytes = std::fs::read(SAMPLE_PATH).expect("failed to read .torrent");
+        let torrent: Torrent = serde_bencode::from_bytes(&bytes).expect("invalid .torrent");
 
         let req = TrackerRequest {
             info_hash: torrent.info_hash(),
@@ -516,6 +510,46 @@ mod tests {
 
         let resp = TrackerRequest::announce(&req, &torrent).expect("announce failed");
 
+        // try to connect to handshake with all ipv6 peers
+        for peer in resp.peers.iter() {
+            if let SocketType::IPv6(addr) = peer {
+                match Peer::new(
+                    std::net::SocketAddr::V6(*addr),
+                    &req.info_hash,
+                    &req.peer_id,
+                ) {
+                    Ok(_) => {
+                        log::info!("handshake successful with {}", addr);
+                        return;
+                    }
+                    Err(e) => {
+                        log::warn!("failed to connect to {}: {}", addr, e);
+                    }
+                }
+            }
+        }
+        log::error!("no usable IPv6 peer could be connected to");
+    }
+
+    #[test]
+    fn test_real_peer_ipv4_run_download() {
+        init_logging();
+
+        let bytes = std::fs::read(SAMPLE_PATH).expect("failed to read .torrent file");
+        let torrent: Torrent = serde_bencode::from_bytes(&bytes).expect("invalid torrent");
+        let torrent = Arc::new(torrent); // wrap in Arc
+
+        let req = TrackerRequest {
+            info_hash: torrent.info_hash(),
+            peer_id: *b"-RU0001-123456789012",
+            port: 6881,
+            uploaded: 0,
+            downloaded: 0,
+            left: torrent.total_length(),
+            compact: 1,
+        };
+
+        let resp = TrackerRequest::announce(&req, &torrent).expect("announce failed");
         let peer_addr = resp
             .peers
             .iter()
@@ -533,9 +567,10 @@ mod tests {
         ) {
             Ok(peer) => peer,
             Err(e) => {
-                eprintln!(
+                log::error!(
                     "skipping test: failed to connect to peer {}: {}",
-                    peer_addr, e
+                    peer_addr,
+                    e
                 );
                 return;
             }
@@ -545,10 +580,8 @@ mod tests {
         queue.push_back(0); // try downloading piece 0
         let piece_queue = Arc::new(Mutex::new(queue));
         let (tx, rx) = mpsc::channel();
-
         let torrent_clone = Arc::clone(&torrent);
         let piece_hash_fn = Arc::new(move |i| torrent_clone.piece_hash(i));
-
         let peer_piece_length = torrent.piece_length();
         let peer_total_length = torrent.total_length();
 
@@ -578,7 +611,7 @@ mod tests {
     }
 
     #[test]
-    fn test_real_peer_run_skips_missing_piece() {
+    fn test_real_peer_ipv4_run_skips_missing_piece() {
         init_logging();
 
         let bytes = std::fs::read(SAMPLE_PATH).expect("failed to read .torrent file");
@@ -614,9 +647,10 @@ mod tests {
         ) {
             Ok(peer) => peer,
             Err(e) => {
-                eprintln!(
+                log::error!(
                     "skipping test: failed to connect to peer {}: {}",
-                    peer_addr, e
+                    peer_addr,
+                    e
                 );
                 return;
             }

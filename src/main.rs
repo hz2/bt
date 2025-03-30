@@ -83,24 +83,6 @@ fn main() {
         })
         .collect();
 
-    /*
-    TODO: ipv6 once on network that supports it
-    let peers: Vec<SocketAddr> = tracker_resp
-    .peers
-    .iter()
-    .filter(|p| match (p, args.ipv6) {
-        (SocketType::IPv4(_), _) => true,
-        (SocketType::IPv6(_), true) => true,
-        _ => false,
-    })
-    .map(|p| match p {
-        SocketType::IPv4(addr) => SocketAddr::V4(*addr),
-        SocketType::IPv6(addr) => SocketAddr::V6(*addr),
-    })
-    .collect();
-
-     */
-
     if peers.is_empty() {
         eprintln!("No usable peers found.");
         std::process::exit(1);

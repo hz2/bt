@@ -69,7 +69,7 @@ impl PieceWriter {
     pub fn write_piece(&mut self, index: u32, data: &[u8]) -> std::io::Result<()> {
         log::info!("writing piece {} to disk", index);
         let offset = (index as u64) * (self.piece_length as u64);
-        self.file.seek(SeekFrom::Start(offset))?;
+        self.file.seek(SeekFrom::Start(offset))?; // TODO: wonder if this can be optimized
         self.file.write_all(data)?;
         Ok(())
     }

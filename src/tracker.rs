@@ -204,6 +204,7 @@ impl TrackerRequest {
 mod tests {
     use super::*;
     use crate::SAMPLE_PATH;
+    use serde_bencode::{from_bytes, to_bytes};
     use std::fs;
     use std::net::{Ipv4Addr, Ipv6Addr, SocketAddrV4, SocketAddrV6};
 
@@ -242,6 +243,20 @@ mod tests {
     fn test_ci_parse_torrent_file() {
         let bytes = std::fs::read(SAMPLE_PATH).expect("failed to read .torrent file");
         let _: Torrent = serde_bencode::from_bytes(&bytes).expect("failed to parse");
+    }
+
+    #[test]
+    fn test_ci_round_trip_ipv6_peer() {
+        let peer = peers::SocketType::IPv6(SocketAddrV6::new(
+            "2a00:1450:4009:822::200e".parse().unwrap(),
+            6881,
+            0,
+            0,
+        ));
+        let peers = Peers(vec![peer.clone()]);
+        let encoded = to_bytes(&peers).expect("serialization failed");
+        let decoded: Peers = from_bytes(&encoded).expect("deserialization failed");
+        assert_eq!(decoded.0[0], peer);
     }
 
     #[test]

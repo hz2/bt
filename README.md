@@ -5,7 +5,8 @@
 ## Design
 
 - design of this client is based on the [BitTorrent v1.0 protocol](https://wiki.theory.org/BitTorrentSpecification).
-- the client is written in Rust and only uses core `stdlib` for networking, i.e. no [`tokio`](https://docs.rs/tokio/latest/tokio/) or [`async`](https://doc.rust-lang.org/std/keyword.async.html)
+- the client is written in Rust and only uses core `stdlib` for networking, i.e. no [`tokio`](https://docs.rs/tokio/latest/tokio/)
+  or [`async`](https://doc.rust-lang.org/std/keyword.async.html)
   - this was for a personal challenge to handle any asynchronous I/O using only `stdlib`
 
 ## Verifying a sample download
@@ -13,7 +14,7 @@
 I got the torrent from Debian's official site which can be found [here](https://cdimage.debian.org/debian-cd/current/arm64/bt-cd/).
 Note that what lies in the `current` directory is the latest version of Debian, which at the time of writing is `12.10.0`.
 Also note that the list of peers that the tracker returns for this torrent are mostly IPv6 addresses, so the client
-may not work as expected if you don't have IPv6 support on your network.
+may not work as expected if you don't have IPv6 support on your network (it did not work for my home network for IPv6) peers.
 
 The page includes the following:
 

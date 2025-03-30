@@ -2,6 +2,8 @@ use std::io::{Read, Write};
 use std::net::{TcpStream, ToSocketAddrs};
 use std::time::Duration;
 
+const TIMEOUT: Duration = Duration::from_secs(5);
+
 pub struct HttpResponse {
     pub status_code: u16,
     pub headers: Vec<(String, String)>,
@@ -22,7 +24,7 @@ pub fn http_get(url: &str) -> anyhow::Result<HttpResponse> {
     let addr = (host, port).to_socket_addrs()?.next().unwrap();
     let mut stream = TcpStream::connect_timeout(&addr, Duration::from_secs(5))?;
 
-    stream.set_read_timeout(Some(Duration::from_secs(5)))?;
+    stream.set_read_timeout(Some(TIMEOUT))?;
 
     let path = if let Some(q) = url.query() {
         format!("{}?{}", url.path(), q)

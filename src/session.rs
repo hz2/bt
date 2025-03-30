@@ -20,6 +20,7 @@ pub struct SessionStats {
     pub completed_pieces: u32,
     pub failed_peers: u32,
     pub successful_peers: u32,
+    // TODO: add more stats
 }
 
 impl Session {
@@ -127,7 +128,7 @@ mod tests {
     use std::net::SocketAddr;
 
     #[test]
-    fn test_real_session_full_download() {
+    fn test_real_session_ipv4_full_download() {
         init_logging();
 
         let bytes = fs::read(SAMPLE_PATH).expect("failed to read .torrent file");
@@ -156,7 +157,7 @@ mod tests {
             .collect();
 
         if peer_addrs.is_empty() {
-            eprintln!("no IPv4 peers available; skipping test.");
+            log::error!("no IPv4 peers available; skipping test.");
             return;
         }
 
@@ -178,7 +179,7 @@ mod tests {
     }
 
     #[test]
-    fn test_real_session_download_with_stats() {
+    fn test_real_session_ipv4_download_with_stats() {
         init_logging();
 
         let bytes = fs::read(SAMPLE_PATH).expect("failed to read .torrent file");
@@ -207,7 +208,7 @@ mod tests {
             .collect();
 
         if peer_addrs.is_empty() {
-            eprintln!("No IPv4 peers available; skipping test.");
+            log::error!("No IPv4 peers available; skipping test.");
             return;
         }
 

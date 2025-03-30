@@ -37,7 +37,6 @@ impl BitField {
         bytes
     }
 
-    /// Returns true if the bit at the given index is set.
     pub fn is_set(&self, index: usize) -> bool {
         let byte = index / 8;
         let bit = index % 8;

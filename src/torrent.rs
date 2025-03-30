@@ -2,6 +2,8 @@ use serde::{Deserialize, Serialize};
 use serde_bytes::ByteBuf;
 use sha1::{Digest, Sha1};
 
+const HASH_SIZE: usize = 20;
+
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct Torrent {
     /// URL of the tracker
@@ -11,7 +13,7 @@ pub struct Torrent {
 }
 
 impl Torrent {
-    pub fn info_hash(&self) -> [u8; 20] {
+    pub fn info_hash(&self) -> [u8; HASH_SIZE] {
         let encoded = serde_bencode::to_bytes(&self.info);
         let mut h = Sha1::new();
         h.update(encoded.unwrap());
@@ -32,18 +34,18 @@ impl Torrent {
         }
     }
 
-    pub fn piece_hash(&self, index: u32) -> [u8; 20] {
+    pub fn piece_hash(&self, index: u32) -> [u8; HASH_SIZE] {
         let pieces = match &self.info {
             Info::Single { pieces, .. } => pieces,
             Info::Multi { pieces, .. } => pieces,
         };
 
-        let start = (index as usize) * 20;
-        let end = start + 20;
+        let start = (index as usize) * HASH_SIZE;
+        let end = start + HASH_SIZE;
 
         assert!(end <= pieces.len(), "piece index out of bounds");
 
-        let mut hash = [0u8; 20];
+        let mut hash = [0u8; HASH_SIZE];
         hash.copy_from_slice(&pieces[start..end]);
         hash
     }
@@ -66,7 +68,7 @@ pub enum Mode {
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct File {
     pub length: usize,
-    pub path: Vec<String>, // Bencoded as a list of path components
+    pub path: Vec<String>,
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
@@ -90,4 +92,30 @@ pub enum Info {
     },
 }
 
-// TODO: testing
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::SAMPLE_PATH;
+    use serde_bencode::from_bytes;
+
+    #[test]
+    fn test_ci_torrent_parsing() {
+        let bytes = std::fs::read(SAMPLE_PATH).expect("failed to read .torrent file");
+        let torrent: Torrent = from_bytes(&bytes).expect("invalid torrent");
+        log::info!("Parsed torrent: {:?}", torrent);
+        assert_eq!(
+            torrent.announce,
+            "http://bttracker.debian.org:6969/announce"
+        );
+        assert_eq!(torrent.info_hash().len(), HASH_SIZE);
+    }
+
+    #[test]
+    fn test_piece_hash() {
+        let bytes = std::fs::read(SAMPLE_PATH).expect("failed to read .torrent file");
+        let torrent: Torrent = from_bytes(&bytes).expect("invalid torrent");
+        let piece_hash = torrent.piece_hash(0);
+        assert_eq!(piece_hash.len(), HASH_SIZE);
+        log::info!("Piece hash: {:?}", piece_hash);
+    }
+}
