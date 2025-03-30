@@ -4,10 +4,14 @@
 
 ## Design
 
-- design of this client is based on the [BitTorrent v1.0 protocol](https://wiki.theory.org/BitTorrentSpecification).
+- design of this client is based on the [BitTorrent v1.0 protocol](https://wiki.theory.org/BitTorrentSpecification)
 - the client is written in Rust and only uses core `stdlib` for networking, i.e. no [`tokio`](https://docs.rs/tokio/latest/tokio/)
   or [`async`](https://doc.rust-lang.org/std/keyword.async.html)
   - this was for a personal challenge to handle any asynchronous I/O using only `stdlib`
+- custom `http` client from scratch to send `GET` requests to the tracker
+- peer that performs the full BitTorrent peer wire protocol
+- piece/block assembler and writer to disk
+- central session orchestrator for concurrently handling downloads from multiple peers using a piece queue and handles validating pieces
 
 ## Verifying a sample download
 
