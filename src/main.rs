@@ -7,6 +7,7 @@ use bt::session::Session;
 use bt::torrent::Torrent;
 use bt::tracker::{peers::SocketType, TrackerRequest};
 use bt::util::init_logging;
+
 #[derive(Parser, Debug)]
 #[command(name = "bt", about = "jd's BitTorrent client", author, version)]
 struct Args {
