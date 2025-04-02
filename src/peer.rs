@@ -15,7 +15,7 @@ const HANDSHAKE_LEN: usize = 68;
 const RESERVED_LEN: usize = 8;
 const BLOCK_SIZE: u32 = 16 * 1024;
 const TIMEOUT: Duration = Duration::from_secs(3);
-
+const BACKOFF: Duration = Duration::from_millis(100);
 #[derive(Debug)]
 pub struct Peer {
     pub addr: SocketAddr,
@@ -33,7 +33,7 @@ impl Peer {
         stream.set_read_timeout(Some(TIMEOUT))?;
         stream.set_write_timeout(Some(TIMEOUT))?;
 
-        let mut handshake = Vec::with_capacity(68);
+        let mut handshake = Vec::with_capacity(HANDSHAKE_LEN);
         handshake.push(BT_PROTOCOL_LEN);
         handshake.extend_from_slice(BT_PROTOCOL.as_bytes());
         handshake.extend_from_slice(&[0; RESERVED_LEN]);
@@ -140,7 +140,12 @@ impl Peer {
                 self.stream.read_exact(&mut begin_buf)?;
                 let begin = u32::from_be_bytes(begin_buf);
 
-                let block_len = length - 9;
+                let block_len = length - 9; // 1 byte for message id, 4 bytes for index, 4 bytes for begin
+
+                if block_len > BLOCK_SIZE {
+                    anyhow::bail!("block length exceeds maximum size");
+                }
+
                 let mut block = vec![0u8; block_len as usize];
                 self.stream.read_exact(&mut block)?;
 
@@ -252,7 +257,7 @@ impl Peer {
                         index
                     );
                     rejected.insert(index);
-                    std::thread::sleep(Duration::from_millis(100)); // backoff
+                    std::thread::sleep(BACKOFF); // backoff
                     let mut queue = pending_pieces.lock().unwrap();
                     queue.push_back(index);
                     continue;
@@ -523,7 +528,7 @@ mod tests {
                         return;
                     }
                     Err(e) => {
-                        log::warn!("failed to connect to {}: {}", addr, e);
+                        log::error!("failed to connect to {}: {}", addr, e);
                     }
                 }
             }

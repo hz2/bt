@@ -11,22 +11,34 @@ pub use peers::Peers;
 // TODO: UDP protocol: https://www.bittorrent.org/beps/bep_0015.html
 
 pub struct TrackerRequest {
+    /// 20-byte SHA1 hash of the info dictionary
     pub info_hash: [u8; 20],
+    /// 20-byte peer ID
     pub peer_id: [u8; 20],
+    /// Port number of the client and what other peers should use to connect to it
     pub port: u16,
+    /// Number of bytes uploaded
     pub uploaded: usize,
+    /// Number of bytes downloaded
     pub downloaded: usize,
+    /// Number of bytes left to download
     pub left: usize,
+    /// Compact mode (1 for compact, 0 for non-compact)
+    /// Compact mode is used to reduce the size of the response
     pub compact: u8,
     // TODO: no_peer_id, event, ip, numwant, key, trackerid
 }
 #[derive(Debug, Clone, Deserialize)]
 pub struct TrackerResponse {
+    /// 0 if the request was successful, otherwise an error message
     #[serde(default)]
     pub failure_reason: String,
+    /// Interval in seconds between requests to the tracker
     pub interval: usize,
+    /// The minimum interval in seconds between requests to the tracker
     #[serde(default)]
     pub tracker_id: String,
+    /// The number of bytes left to download
     #[serde(default)]
     pub complete: u32,
     #[serde(default)]
@@ -177,6 +189,8 @@ impl TrackerRequest {
         if decoded.peers.0.is_empty() {
             anyhow::bail!("tracker error: no peers");
         }
+
+        log::debug!("tracker response: {:?}", decoded);
         Ok(decoded)
     }
 
