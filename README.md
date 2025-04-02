@@ -13,6 +13,17 @@
 - piece/block assembler and writer to disk
 - central session orchestrator for concurrently handling downloads from multiple peers using a piece queue and handles validating pieces
 
+## Usage
+
+```bash
+cargo run --release -- \
+  --torrent <path/to/file.torrent> \
+  --output <path/to/output/file> \
+  --compact 1 \
+  --port 6881 \
+  --verbose
+```
+
 ## Verifying a sample download
 
 I got the torrent from Debian's official site which can be found [here](https://cdimage.debian.org/debian-cd/current/arm64/bt-cd/).

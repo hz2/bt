@@ -40,6 +40,8 @@ fn main() {
     let args = Args::parse();
     init_logging();
 
+    log::debug!("Starting BitTorrent client with args: {:?}", args);
+
     let torrent_bytes = fs::read(&args.torrent).expect("could not read .torrent file");
     let torrent: Torrent =
         serde_bencode::from_bytes(&torrent_bytes).expect("invalid .torrent file");
